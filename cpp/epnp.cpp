@@ -344,11 +344,63 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
   t[2] = pc0[2] - dot(R[2], pw0);
 }
 
+
+//将旋转矩阵转换为欧拉角 欧拉角顺序为 Z Y X 
+cv::Vec3f rotationMatrixToEulerAngles(cv::Mat &R)
+{
+    // float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
+    float sy = sqrt(R.at<double>(2,1) * R.at<double>(2,1) +  R.at<double>(2,2) * R.at<double>(2,2) );
+
+
+    bool singular = sy < 1e-6; // If
+
+
+    float x, y, z;
+    if (!singular) {
+        x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
+        y = atan2(-R.at<double>(2,0), sy);
+        z = atan2(R.at<double>(1,0), R.at<double>(0,0));
+    } else {
+        x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
+        y = atan2(-R.at<double>(2,0), sy);
+        z = 0;
+    }
+    // cout << " r: " << x<< y << z << endl;
+    // x = x*(180/3.1415926);
+    // y = y*(180/3.1415926);
+    // z = z*(180/3.1415926);
+    return cv ::Vec3f(z, y, x);
+}
+
 void epnp::print_pose(const double R[3][3], const double t[3])
 {
+  cout << "R:" << endl;
   cout << R[0][0] << " " << R[0][1] << " " << R[0][2] << " " << t[0] << endl;
   cout << R[1][0] << " " << R[1][1] << " " << R[1][2] << " " << t[1] << endl;
   cout << R[2][0] << " " << R[2][1] << " " << R[2][2] << " " << t[2] << endl;
+
+
+  // 输出欧拉角
+  double  rtemp[3][3] ;
+  double  ttemp[3][1];
+  memcpy(rtemp,R, 9 * sizeof(double));
+  memcpy(ttemp,t, 3 * sizeof(double));
+  cv::Mat rotation_cv(3,3,CV_64F,rtemp); // 使用R数组初始化Mat 矩阵
+  cv::Mat trans_cv(3,1,CV_64F,ttemp);
+
+  Eigen::Matrix3d rotation_eigen ;
+  Eigen::Vector3d trans_eigen;
+  cv::cv2eigen(rotation_cv,rotation_eigen);
+  cout << "rotation_eigen: " << endl  << rotation_eigen << endl;
+  cv::cv2eigen(trans_cv,trans_eigen);
+  cout <<  "rotation_Eulaer: "<< endl << rotationMatrixToEulerAngles(rotation_cv) << endl;
+  cout <<  "rotation_: "<< endl << rotationMatrixToEulerAngles(rotation_cv)*(180/3.1415926) << endl;
+  // 输出trans
+  cout << "trans before: "<< endl << trans_eigen << endl;
+  trans_eigen = (-1) * (rotation_eigen.inverse() * trans_eigen); // ** 坐标系变换  
+  cout << "trans after: "<< endl << trans_eigen << endl;
+  // cout << " lu.isInvertible() :" <<rotation_eigen.isInvertible();
+
 }
 
 void epnp::solve_for_sign(void)

@@ -29,6 +29,9 @@
 #define epnp_h
 
 #include <cv.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <opencv2/core/eigen.hpp>
 
 class epnp {
  public:
